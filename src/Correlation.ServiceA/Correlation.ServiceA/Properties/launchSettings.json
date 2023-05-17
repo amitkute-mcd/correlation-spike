@@ -1,0 +1,36 @@
+{
+  "profiles": {
+    "Correlation.ServiceA": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "hotReloadEnabled": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OTEL_RESOURCE_ATTRIBUTES": "service.namespace=otel-correlation",
+        "OTEL_SERVICE_NAME": "Correlation.ServiceA",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "DOTNET_RUNNING_IN_CONTAINER": "false",
+        "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "true"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5001"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
+      "publishAllPorts": true,
+      "useSSL": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OTEL_RESOURCE_ATTRIBUTES": "service.namespace=otel-correlation",
+        "OTEL_SERVICE_NAME": "Correlation.ServiceA",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "DOTNET_RUNNING_IN_CONTAINER": "false",
+        "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "true"
+      }
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json"
+}

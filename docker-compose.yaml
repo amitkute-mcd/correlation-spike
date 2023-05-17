@@ -1,0 +1,140 @@
+version: "3.9"
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+networks:
+  default:
+    name: opentelemetry-correlation
+    driver: bridge
+
+services:
+  # Service A
+  service-a:
+    image: service-a
+    container_name: service-a
+    build:
+      context: ./
+      dockerfile: ./Correlation.ServiceA/Correlation.ServiceA/Dockerfile
+      cache_from:
+        - service-a
+    deploy:
+      resources:
+        limits:
+          memory: 160M
+    restart: unless-stopped
+    ports:
+      - 5001:80
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=otel-correlation
+      - OTEL_SERVICE_NAME=Correlation.ServiceA
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otelcol:4317
+      - DOTNET_RUNNING_IN_CONTAINER=TRUE
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
+      - ASPNETCORE_URLS=http://*:80
+    depends_on:
+      - service-base
+      - otelcol
+    logging: *logging
+
+  # Service B
+  service-b:
+    image: service-b
+    container_name: service-b
+    build:
+      context: ./
+      dockerfile: ./Correlation.ServiceB/Correlation.ServiceB/Dockerfile
+      cache_from:
+        - service-B
+    deploy:
+      resources:
+        limits:
+          memory: 160M
+    restart: unless-stopped
+    ports:
+      - 5002:80
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=otel-correlation
+      - OTEL_SERVICE_NAME=Correlation.ServiceA
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otelcol:4317
+      - DOTNET_RUNNING_IN_CONTAINER=TRUE
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
+      - ASPNETCORE_URLS=http://*:80
+    depends_on:
+      - service-base
+      - otelcol
+    logging: *logging
+
+  # Service Base
+  service-base:
+    image: service-base
+    container_name: service-base
+    build:
+      context: ./
+      dockerfile: ./src/Correlation.WeatherForecast/Correlation.WeatherForecast/Dockerfile
+      cache_from:
+        - service-B
+    deploy:
+      resources:
+        limits:
+          memory: 160M
+    restart: unless-stopped
+    ports:
+      - 5000:80
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=otel-correlation
+      - OTEL_SERVICE_NAME=Correlation.ServiceA
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otelcol:4317
+      - DOTNET_RUNNING_IN_CONTAINER=TRUE
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
+      - ASPNETCORE_URLS=http://*:80
+    depends_on:
+      - otelcol
+    logging: *logging
+
+  # Frontend
+  frontend:
+    image: otel-angular-frontend
+    container_name: frontend
+    build:
+      context: ./
+      dockerfile: ./src/otel-angular/Dockerfile
+      cache_from:
+        - otel-angular-frontend
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    ports:
+      - 4300:80
+    environment:
+      - WEB_OTEL_SERVICE_NAME=frontend-web
+    depends_on:
+      - service-base
+    logging: *logging
+
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:0.76.1
+    container_name: otelcol
+    deploy:
+      resources:
+        limits:
+          memory: 125M
+    restart: unless-stopped
+    command:
+      [
+        "--config=/etc/otelcol-config.yml",
+        "--config=/etc/otelcol-config-extras.yml",
+      ]
+    volumes:
+      - ./src/otelcollector/otelcol-config.yml:/etc/otelcol-config.yml
+      - ./src/otelcollector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
+    ports:
+      - "4317" # OTLP over gRPC receiver
+      - "4318:4318" # OTLP over HTTP receiver
+      - "9464" # Prometheus exporter
+      - "8888" # metrics endpoint
+    logging: *logging
